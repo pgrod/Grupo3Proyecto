@@ -28,3 +28,30 @@ router.post('/registro', async (req, res) => {
                         res.status(500).json({message: 'Error en el servidor.'});
                     }
           });
+
+router.post('/login', async (req, res) => {
+            const {email, password} = req.body;
+            if(!email || !password) {
+                return res.status(400),json({message:'Porfavor complete todos los campos requeridos.'});
+            }
+            try {
+                const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
+                if(rows.length === 0) {
+                    return res.status(400).json({message: 'Credenciales invalidas.'});
+                }
+
+                const user = rows[0];
+                const valid = await bcrypt.compare(password, user.password);
+
+                if(!valid) {
+                    return res.status(400).json({message: 'Credenciales invalidas.'});
+                }
+
+                const token = jwt.sign({id: user.id, rol: user.rol}, JWT_SECRET, {expiresIn: '24h'});
+                res.json({token, user: {id: user.id, nombre: user.nombre, apellido: user.apellido, email: user.email, rol: user.rol}
+                });
+
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({message: 'Error en el login.'});
+            }});
