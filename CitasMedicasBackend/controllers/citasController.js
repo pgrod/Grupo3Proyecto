@@ -77,3 +77,19 @@ router.get ('/', verifyToken, async (req, res) => {
         console.error(error);
         res.status(500).json({message: 'Error al obtener los usuarios.'});
 }});
+
+router.put ('/perfil', verifyToken, async (req, res) => {
+    const {nombre, apellido, telefono, fecha_nacimiento, direccion} = req.body;
+
+    try{
+        await pool.query('UPDATE usuarios SET nombre = ?, apellido = ?, telefono = ?, fecha_nacimiento = ?, direccion = ? WHERE id = ?',
+        [nombre, apellido, telefono, fecha_nacimiento, direccion, req.user.id]);
+        res.json({message: 'Perfil actualizado exitosamente.'});
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({message: 'Error al actualizar el perfil.'});
+}});
+
+module.exports = {router
+    }
+
