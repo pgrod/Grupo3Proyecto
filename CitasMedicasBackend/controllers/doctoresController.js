@@ -92,3 +92,19 @@ router.get('/especialidades/lista', async (req, res) => {
             )
         }
     });
+
+    router.delete('/:id', verifyToken, async (req, res) => {
+        if (req.user.rol !== 'admin') {
+            return res.status(403).json({message: 'Acceso denegado.'});
+        }
+        try { 
+            const [result] = await pool.query('DELETE FROM doctores WHERE id = ?', [req.params.id]);
+            if (!result.affectedRows) return res.status(404).json({message: 'Doctor no encontrado.'});
+
+            res.json({message: 'Doctor eliminado exitosamente.'});
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({message: 'Error al eliminar el doctor.'});
+        }
+    });
+module.exports = router;
