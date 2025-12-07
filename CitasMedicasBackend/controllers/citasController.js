@@ -55,3 +55,25 @@ router.post('/login', async (req, res) => {
                 console.error(error);
                 res.status(500).json({message: 'Error en el login.'});
             }});
+
+router.get('/perfil', verifyToken, async (req, res) => {
+    try{
+        const [rows] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios WHERE id = ?', [req.user.id]);
+
+        res.json(rows[0] ||{});
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({message: 'Error al obtener el perfil del usuario.'});
+}});
+
+router.get ('/', verifyToken, async (req, res) => {
+    if (req.user.rol !== 'admin') {
+        return res.status(403).json({message: 'Acceso denegado.'});
+    }
+    try {
+        const [rows] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios');
+        res.json(rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({message: 'Error al obtener los usuarios.'});
+}});
