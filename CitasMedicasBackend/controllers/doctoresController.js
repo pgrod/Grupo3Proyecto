@@ -49,4 +49,26 @@ router.get('/especialidades/lista', async (req, res) => {
     }
     });
 
-    
+    router.post('/', verifyToken, async (req, res) => {
+        const {especialidad, horario} = req.body;
+
+        try{
+            const [[user]] = await pool.query('SELECT rol FROM usuarios WHERE id = ?', [req.user.id]);
+
+            if (!user || user.rol !== 'doctor') {
+                return res.status(403).json({message: 'Acceso denegado.'});
+            }
+            const [[ecxist]] = await pool.query('SELECT id FROM doctores WHERE usuario_id = ?', [req.user.id]);
+             if (exist) return res.status(400).json({message: 'El doctor ya esta registrado.'});
+
+             const [result] = await pool.query('INSERT INTO doctores (usuario_id, especialidad, horario) VALUES (?, ?, ?)', [req.user.id, especialidad, horario]);
+
+
+        res.status(201).json({message: 'Doctor registrado exitosamente.'});
+    } catch (error) {
+        res.status(500).json({message: 'Error al registrar el doctor.'});
+    }
+    });
+
+    router.put('/:id', verifyToken, async (req, res) => {
+        
