@@ -1,11 +1,19 @@
-import {View, Text} from 'react-native';
 import React from 'react';
-import ListaCitas from '../Componentes/ListaCitas';
+import { View, Text, Button } from 'react-native';
 
-export default function Home() {
-    return (
-        <View>
-            <ListaCitas></ListaCitas>
-        </View>
-    );
+export const ListaCitas: React.FC = () => {
+  return (
+    <View>
+      <Text>Lista de citas</Text>
+    </View>
+  );
+};
+
+export default function Home({ navigation }: { navigation: any }) {
+  return (
+    <View>
+      <ListaCitas />
+      <Button title="Agendar nueva cita" onPress={() => navigation.navigate('FormularioCita')} />
+    </View>
+  );
 }
