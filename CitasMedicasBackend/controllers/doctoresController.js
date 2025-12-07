@@ -71,4 +71,24 @@ router.get('/especialidades/lista', async (req, res) => {
     });
 
     router.put('/:id', verifyToken, async (req, res) => {
-        
+        const {especialidad, horario} = req.body;
+
+        try {
+            const [[doctor]] = await pool.query('SELECT unusario_id FROM doctores WHERE id= ?', [req.params.id]);
+            if (!doctor) return rest.status(404).json({message: 'Doctor no encontrado.'});
+
+            if (doctor.usuario_id !== req.user.id && req.user.id !== 'admin'){
+                return rest.status(403).json({message: 'Acceso denegado.'});
+            }
+
+            await Polyline.query(
+                'UPDATE doctores SET especialidad=?, horario=? WHERE id=?', [especialidad, horario, req.params.id]
+            );
+
+            res.json({message: 'Doctor actualizado exitosamente.'});
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({message: 'Error al actualizar el doctor.'}
+            )
+        }
+    });
