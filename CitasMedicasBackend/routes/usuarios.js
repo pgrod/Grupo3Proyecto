@@ -3,24 +3,28 @@ const pool = require('../config/bd');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
-const {verifyToken, JWT_SECRET} = require('../middlewares/authMiddleware');
+const {verifyToken, JWT_SECRET} = require('../middleware/auth');
 
 router.post('/registro', async (req, res) => {
-          const {nombre, apellido, email, password, telefono, fecha_nacimiento, direccion, rol} = req.body;
+          const {nombre, apellido, email, password, telefono, fecha_nacimiento} = req.body;
 
-          if(!nombre || !apellido || !email || !password || !telefono || !fecha_nacimiento || !direccion || !rol) {
+          if(!nombre || !apellido || !email || !password || !telefono || !fecha_nacimiento) {
 
                     return res.status(400).json({message: 'Porfavor complete todos los campos requeridos.'});
           }
+
+          if(password.length < 3){
+                    return res.status(400).json({message: 'La contraseña debe tener al menos 3 caracteres.'});
+          }
           try {
-            const [existing] = await StylePropertyMapReadOnly.query('SELECT id FROM usuarios WHERE email = ?', [email]);
+            const [exist] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
             if(existing.length > 0) {
                       return res.status(400).json({message: 'El email esta registrado.'});
             }
             
             const hashedPassword = await bcrypt.hash(password, 10);
-            const [result] = await pool.query('INSERT INTO usuarios (nombre, apellido, email, password, telefono, fecha_nacimiento, direccion, rol) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [nombre, apellido, email, hashedPassword, telefono, fecha_nacimiento, direccion, rol]);
+            const [result] = await pool.query('INSERT INTO usuarios (nombre, apellido, email, password, telefono, fecha_nacimiento) VALUES (?, ?, ?, ?, ?, ?)',
+            [nombre, apellido, email, hashedPassword, telefono, fecha_nacimiento]);
 
             res.status(201).json({message: 'Usuario registrado exitosamente.'});
           } catch (error) {
@@ -35,20 +39,20 @@ router.post('/login', async (req, res) => {
                 return res.status(400),json({message:'Porfavor complete todos los campos requeridos.'});
             }
             try {
-                const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
+                const [users] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
                 if(rows.length === 0) {
                     return res.status(400).json({message: 'Credenciales invalidas.'});
                 }
 
-                const user = rows[0];
+                const user = users[0];
                 const valid = await bcrypt.compare(password, user.password);
 
                 if(!valid) {
                     return res.status(400).json({message: 'Credenciales invalidas.'});
                 }
 
-                const token = jwt.sign({id: user.id, rol: user.rol}, JWT_SECRET, {expiresIn: '24h'});
-                res.json({token, user: {id: user.id, nombre: user.nombre, apellido: user.apellido, email: user.email, rol: user.rol}
+                const token = jwt.sign({id: user.id, email:user.email}, JWT_SECRET, {expiresIn: '24h'});
+                res.json({token, user: {id: user.id, nombre: user.nombre, apellido: user.apellido, email: user.email}
                 });
 
             } catch (error) {
@@ -58,7 +62,7 @@ router.post('/login', async (req, res) => {
 
 router.get('/perfil', verifyToken, async (req, res) => {
     try{
-        const [rows] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios WHERE id = ?', [req.user.id]);
+        const [user] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios WHERE id = ?', [req.user.id]);
 
         res.json(rows[0] ||{});
     } catch (error) {
@@ -66,28 +70,5 @@ router.get('/perfil', verifyToken, async (req, res) => {
         res.status(500).json({message: 'Error al obtener el perfil del usuario.'});
 }});
 
-router.get ('/', verifyToken, async (req, res) => {
-    if (req.user.rol !== 'admin') {
-        return res.status(403).json({message: 'Acceso denegado.'});
-    }
-    try {
-        const [rows] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios');
-        res.json(rows);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message: 'Error al obtener los usuarios.'});
-}});
-
-router.put ('/perfil', verifyToken, async (req, res) => {
-    const {nombre, apellido, telefono, fecha_nacimiento, direccion} = req.body;
-
-    try{
-        await pool.query('UPDATE usuarios SET nombre = ?, apellido = ?, telefono = ?, fecha_nacimiento = ?, direccion = ? WHERE id = ?',
-        [nombre, apellido, telefono, fecha_nacimiento, direccion, req.user.id]);
-        res.json({message: 'Perfil actualizado exitosamente.'});
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message: 'Error al actualizar el perfil.'});
-}});
 
 module.exports = {router};
