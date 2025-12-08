@@ -1,93 +1,77 @@
 const express = require('express');
 const pool = require('../config/bd');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const router = express.Router();
-const {verifyToken, JWT_SECRET} = require('../middlewares/authMiddleware');
+const {verifyToken} = require('../middleware/auth');
 
-router.post('/registro', async (req, res) => {
-          const {nombre, apellido, email, password, telefono, fecha_nacimiento, direccion, rol} = req.body;
-
-          if(!nombre || !apellido || !email || !password || !telefono || !fecha_nacimiento || !direccion || !rol) {
-
-                    return res.status(400).json({message: 'Porfavor complete todos los campos requeridos.'});
-          }
-          try {
-            const [existing] = await StylePropertyMapReadOnly.query('SELECT id FROM usuarios WHERE email = ?', [email]);
-            if(existing.length > 0) {
-                      return res.status(400).json({message: 'El email esta registrado.'});
-            }
-            
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const [result] = await pool.query('INSERT INTO usuarios (nombre, apellido, email, password, telefono, fecha_nacimiento, direccion, rol) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [nombre, apellido, email, hashedPassword, telefono, fecha_nacimiento, direccion, rol]);
-
-            res.status(201).json({message: 'Usuario registrado exitosamente.'});
-          } catch (error) {
-                    console.error(error);
-                        res.status(500).json({message: 'Error en el servidor.'});
-                    }
-          });
-
-router.post('/login', async (req, res) => {
-            const {email, password} = req.body;
-            if(!email || !password) {
-                return res.status(400),json({message:'Porfavor complete todos los campos requeridos.'});
-            }
-            try {
-                const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
-                if(rows.length === 0) {
-                    return res.status(400).json({message: 'Credenciales invalidas.'});
-                }
-
-                const user = rows[0];
-                const valid = await bcrypt.compare(password, user.password);
-
-                if(!valid) {
-                    return res.status(400).json({message: 'Credenciales invalidas.'});
-                }
-
-                const token = jwt.sign({id: user.id, rol: user.rol}, JWT_SECRET, {expiresIn: '24h'});
-                res.json({token, user: {id: user.id, nombre: user.nombre, apellido: user.apellido, email: user.email, rol: user.rol}
-                });
-
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({message: 'Error en el login.'});
-            }});
-
-router.get('/perfil', verifyToken, async (req, res) => {
-    try{
-        const [rows] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios WHERE id = ?', [req.user.id]);
-
-        res.json(rows[0] ||{});
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message: 'Error al obtener el perfil del usuario.'});
-}});
-
-router.get ('/', verifyToken, async (req, res) => {
-    if (req.user.rol !== 'admin') {
-        return res.status(403).json({message: 'Acceso denegado.'});
-    }
+router.get('/mis-citas', verifyToken, async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios');
-        res.json(rows);
+        const [citas] = await pool.query(
+            `SELECT c.id, c,fecha, c.hora, c.motivo, c.estado CONCAT(u.nombre, ' ', u.apellido) AS doctor_nombre, d.especialidad AS doctor_especialidad
+            FROM citas c INNER JOIN doctores d ON c.doctor_id = d.id
+            INNER JOIN usuarios u ON d.usuarios_id = u.id WHERE c.paciente_id = ? ORDER BY c.fecha DESC, c.hora DESC`, [req.user.id]);
+        res.json(citas);
+    } catch (error){
+        console.error('Error al obtener cita: ', error);
+        res.status(500).json({message: 'Error al obtener la cita.'});
+    }
+    });
+
+router.get('/disponibilidad/:doctor_id/:fecha', async (req, res) => {
+      const{doctor_id, fecha} = req.params;
+
+      try{
+        const[citasOcupadas] = await pool.query(
+            `SELECT hora FROM citas WHERE doctor_id = ? AND fecha = ? AND estado = 'cancelada'`, [doctor_id, fecha]);
+            const horarios = [
+                '8:00am', '9:00am', '10:00am', '11:00am',
+                '1:00pm', '2:00pm', '3:00pm', '4:00pm'
+            ];
+
+        const horasOcupadas = citasOcupadas.map(c => c.hora.substring(0,5));
+        const horariosDisponibles = horarios.filter(h => !horasOcupadas.includes(h));
+
+        res.json({disponibles : horariosDisponibles});
+        } catch (error) {
+            console.error('Error al obtener disponibilidad: ', error);
+            res.status(500).json({message: 'Error al obtener la disponibilidad.'}
+        );
+      }
+});
+
+router.post('/agendar', verifyToken, async (req, res) => {
+    const {doctor_id, fecha, hora, motivo} = req.body;
+
+    if(!doctor_id || !fecha || !hora || !motivo) {
+        return res.status(400).json({message: 'Porfavor complete todos los campos requeridos.'});
+    }
+
+    try {
+        const [doctor] = await pool.query('SELECT id FROM doctores WHERE id = ?', [doctor_id]);
+        if (doctor.length === 0) {
+            return res.status(400).json({message: 'El doctor no encontrado.'});
+        }
+
+        const [citaExistente] = await pool.query(
+            'SELECT id FROM citas WHERE doctor_id = ? AND fecha = ? AND hora = ? AND estado = "cancelada"', [doctor_id, fecha, hora]);
+
+        if(citaExistente.length > 0) {
+            return res.status(400).json({message: 'El horario no esta disponible.'});
+        }
+
+        const [result] = await pool.query(
+            'INSERT INTO citas (paciente_id, doctor_id, fecha, hora, motivo, estado) VALUES (?, ?, ?, ?, ?, "confirmada")',
+            [req.user.id, doctor_id, fecha, hora, motivo]);
+
+        const [citaCreada] = await pool.query(`SELECT c.id, c.fecha, c.hora, c.motivo, c.estado, CONCAT(u.nombre, ' ', u.apellido) AS doctor_nombre, d.especialidad AS doctor_especialidad FROM citas c INNES JOIN doctores d ON c.citas_id = d.id INNER JOIN usuarios u ON d.usuarios_id = u.id  WHERE c.id = ?`, [result.insertId]);
+
+        res.status(201).json({message: 'Cita agendada exitosamente.', cita: citaCreada[0]});
     } catch (error) {
-        console.error(error);
-        res.status(500).json({message: 'Error al obtener los usuarios.'});
-}});
+        console.error('Error al agendar la cita: ', error);
+        res.status(500).json({message: 'Error al agendar la cita.'} 
 
-router.put ('/perfil', verifyToken, async (req, res) => {
-    const {nombre, apellido, telefono, fecha_nacimiento, direccion} = req.body;
+        )
+    }
+});
 
-    try{
-        await pool.query('UPDATE usuarios SET nombre = ?, apellido = ?, telefono = ?, fecha_nacimiento = ?, direccion = ? WHERE id = ?',
-        [nombre, apellido, telefono, fecha_nacimiento, direccion, req.user.id]);
-        res.json({message: 'Perfil actualizado exitosamente.'});
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message: 'Error al actualizar el perfil.'});
-}});
+module.exports = router;
 
-module.exports = {router};
