@@ -4,7 +4,10 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    credentials: true,
+}));
 app.use(express.json());
 
 const usuariosRoutes = require('./routes/usuarios');
@@ -18,7 +21,7 @@ app.use('/api/citas', citasRoutes);
 app.use('/api/hospital', hospitalRoutes);
 
 app.get('/', (req, res) => {
-    res,json({message: 'API de Citas Médicas'});
+    res.json({message: 'API de Citas Médicas'});
 });
 
 app.use((req, res) => {

@@ -6,9 +6,9 @@ const router = express.Router();
 const {verifyToken, JWT_SECRET} = require('../middleware/auth');
 
 router.post('/registro', async (req, res) => {
-          const {nombre, apellido, email, password, telefono, fecha_nacimiento} = req.body;
+          const {nombre, apellido, email, password} = req.body;
 
-          if(!nombre || !apellido || !email || !password || !telefono || !fecha_nacimiento) {
+          if(!nombre || !apellido || !email || !password) {
 
                     return res.status(400).json({message: 'Porfavor complete todos los campos requeridos.'});
           }
@@ -18,13 +18,13 @@ router.post('/registro', async (req, res) => {
           }
           try {
             const [exist] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
-            if(existing.length > 0) {
+            if(exist.length > 0) {
                       return res.status(400).json({message: 'El email esta registrado.'});
             }
             
             const hashedPassword = await bcrypt.hash(password, 10);
-            const [result] = await pool.query('INSERT INTO usuarios (nombre, apellido, email, password, telefono, fecha_nacimiento) VALUES (?, ?, ?, ?, ?, ?)',
-            [nombre, apellido, email, hashedPassword, telefono, fecha_nacimiento]);
+            const [result] = await pool.query('INSERT INTO usuarios (nombre, apellido, email, password) VALUES (?, ?, ?, ?)',
+            [nombre, apellido, email, hashedPassword]);
 
             res.status(201).json({message: 'Usuario registrado exitosamente.'});
           } catch (error) {
@@ -36,11 +36,11 @@ router.post('/registro', async (req, res) => {
 router.post('/login', async (req, res) => {
             const {email, password} = req.body;
             if(!email || !password) {
-                return res.status(400),json({message:'Porfavor complete todos los campos requeridos.'});
+                return res.status(400).json({message:'Porfavor complete todos los campos requeridos.'});
             }
             try {
                 const [users] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
-                if(rows.length === 0) {
+                if(users.length === 0) {
                     return res.status(400).json({message: 'Credenciales invalidas.'});
                 }
 
@@ -62,13 +62,13 @@ router.post('/login', async (req, res) => {
 
 router.get('/perfil', verifyToken, async (req, res) => {
     try{
-        const [user] = await pool.query('SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, direccion, rol FROM usuarios WHERE id = ?', [req.user.id]);
+        const [user] = await pool.query('SELECT id, nombre, apellido, email, rol FROM usuarios WHERE id = ?', [req.user.id]);
 
-        res.json(rows[0] ||{});
+        res.json(user[0] ||{});
     } catch (error) {
         console.error(error);
         res.status(500).json({message: 'Error al obtener el perfil del usuario.'});
 }});
 
 
-module.exports = {router};
+module.exports = router;
