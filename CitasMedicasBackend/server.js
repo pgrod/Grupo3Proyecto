@@ -1,15 +1,32 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config();
-
-const pool = require('./config/bd');
-
 const app = express();
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
+const usuariosRoutes = require('./routes/usuarios');
+const doctoresRoutes = require('./routes/doctores');
+const citasRoutes = require('./routes/citas');
+const hospitalRoutes = require('./routes/hospital');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'la_clave_secreta_para_jwt';
+app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/doctores', doctoresRoutes);
+app.use('/api/citas', citasRoutes);
+app.use('/api/hospital', hospitalRoutes);
+
+app.get('/', (req, res) => {
+    res,json({message: 'API de Citas Médicas'});
+});
+
+app.use((req, res) => {
+    res.status(404).json({message: 'Ruta no encontrada.'});
+});
+
+app.listen(port, () => {
+    console.log(`Servidor corriendo en http://localhost:${port}`);
+});
+
+module.exports = app;
