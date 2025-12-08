@@ -1,4 +1,4 @@
-// Componentes/Ubicacion.tsx
+
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -9,15 +9,15 @@ export default function Ubicacion() {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: 14.0723, // Ejemplo: Tegucigalpa
-          longitude: -87.1921,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
+        latitude: 15.7597,
+        longitude: -86.7822,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
         }}
       >
         <Marker
           coordinate={{ latitude: 14.0723, longitude: -87.1921 }}
-          title="Clínica Central"
+          title="Hospital EuroHonduras"
           description="Ubicación de la cita médica"
         />
       </MapView>

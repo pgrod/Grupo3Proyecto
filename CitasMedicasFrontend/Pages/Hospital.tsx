@@ -3,10 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import Ubicacion from '../Componentes/Ubicacion';
 
 export default function Hospital() {
-  // Puedes sustituir por datos reales desde Contexto
   const hospital = {
-    nombre: 'Hospital Central',
-    direccion: 'Blvd. Fuerzas Armadas, Comayagüela, FM',
+    nombre: 'Hospital Eurohonduras',
+    direccion: 'I calle, Avenida Atlantida, La Ceiba, Atlantida',
     telefono: '+504 2222-2222'
   };
 
