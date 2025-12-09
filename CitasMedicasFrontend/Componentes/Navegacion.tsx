@@ -2,9 +2,9 @@ import {View, Text} from 'react-native';
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {NavigationContainer} from '@react-navigation/native';
-import Home from '../Pages/Home';
-import FormularioCita from '../Pages/FormularioCita';
-import Cita from '../Pages/Cita';
+import Home from '../app/Home';
+import FormularioCita from '../app/FormularioCita';
+import Cita from '../app/Cita';
 
 export default function Navegacion() {
     const Tab = createBottomTabNavigator();
