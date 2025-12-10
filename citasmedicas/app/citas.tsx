@@ -21,7 +21,7 @@ export default function Citas() {
     setModalVisible(true);
   };
 
-  // Eliminar cita
+  // Eliminar una cita
   const eliminarCita = (index: number) => {
     Alert.alert(
       "Eliminar Cita",
@@ -36,6 +36,25 @@ export default function Citas() {
             nuevasCitas.splice(index, 1);
             setCitas(nuevasCitas);
             localStorage.setItem("citas", JSON.stringify(nuevasCitas));
+          } 
+        },
+      ]
+    );
+  };
+
+  // Borrar todo el registro de citas
+  const borrarTodoRegistro = () => {
+    Alert.alert(
+      "Borrar Todo",
+      "¿Estás segura que quieres eliminar todas las citas?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Borrar Todo", 
+          style: "destructive", 
+          onPress: () => {
+            setCitas([]);
+            localStorage.setItem("citas", JSON.stringify([]));
           } 
         },
       ]
@@ -66,6 +85,11 @@ export default function Citas() {
 
       <View style={{ height: 10 }} />
 
+      {/* Botón Borrar Todo el Registro */}
+      <Button title="Borrar Todo el Registro" color="#d9534f" onPress={borrarTodoRegistro} />
+
+      <View style={{ height: 10 }} />
+
       {/* Botón Regresar al inicio */}
       <Button title="Regresar al Inicio" color="#e94e77" onPress={() => router.push("/")} />
 
@@ -74,3 +98,4 @@ export default function Citas() {
     </View>
   );
 }
+
