@@ -3,28 +3,25 @@ import { useState, useEffect } from "react";
 import { router } from "expo-router";
 import ModalDetalle from "./modal";
 import { styles } from "./styles";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Citas() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCita, setSelectedCita] = useState({ especialidad: "", doctor: "", fecha: "" });
   const [citas, setCitas] = useState<{ especialidad: string; doctor: string; fecha: string }[]>([]);
 
-  // Cargar citas guardadas desde AsyncStorage
+  // Cargar citas guardadas
   useEffect(() => {
-    const cargarCitas = async () => {
-      const citasGuardadas = await AsyncStorage.getItem("citas");
-      if (citasGuardadas) setCitas(JSON.parse(citasGuardadas));
-    };
-    cargarCitas();
+    const citasGuardadas = JSON.parse(localStorage.getItem("citas") || "[]");
+    setCitas(citasGuardadas);
   }, []);
 
+  // Abrir modal
   const abrirModal = (cita: { especialidad: string; doctor: string; fecha: string }) => {
     setSelectedCita(cita);
     setModalVisible(true);
   };
 
-  // Eliminar cita individual
+  // Eliminar cita
   const eliminarCita = (index: number) => {
     Alert.alert(
       "Eliminar Cita",
@@ -34,30 +31,11 @@ export default function Citas() {
         { 
           text: "Eliminar", 
           style: "destructive", 
-          onPress: async () => {
+          onPress: () => {
             const nuevasCitas = [...citas];
             nuevasCitas.splice(index, 1);
             setCitas(nuevasCitas);
-            await AsyncStorage.setItem("citas", JSON.stringify(nuevasCitas));
-          } 
-        },
-      ]
-    );
-  };
-
-  // Limpiar todas las citas
-  const limpiarCitas = () => {
-    Alert.alert(
-      "Limpiar todas las citas",
-      "¿Estás segura que quieres borrar todo el registro?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Sí, borrar todo", 
-          style: "destructive", 
-          onPress: async () => {
-            setCitas([]);
-            await AsyncStorage.removeItem("citas");
+            localStorage.setItem("citas", JSON.stringify(nuevasCitas));
           } 
         },
       ]
@@ -75,21 +53,23 @@ export default function Citas() {
           <TouchableOpacity 
             style={styles.card} 
             onPress={() => abrirModal(item)}
-            onLongPress={() => eliminarCita(index)}
+            onLongPress={() => eliminarCita(index)} // Eliminar con presión larga
           >
             <Text style={styles.cardText}>{item.especialidad} - {item.doctor}</Text>
             <Text>{item.fecha}</Text>
-            <Text style={{ fontSize: 12, color: "#888" }}>Presiona largo para eliminar</Text>
           </TouchableOpacity>
         )}
       />
 
+      {/* Botón Nueva Cita */}
       <Button title="Nueva Cita" color="#4a90e2" onPress={() => router.push("/nueva-cita")} />
-      <View style={{ height: 10 }} />
-      <Button title="Limpiar Registro de Citas" color="#e94e77" onPress={limpiarCitas} />
-      <View style={{ height: 10 }} />
-      <Button title="Regresar al Inicio" color="#888" onPress={() => router.push("/")} />
 
+      <View style={{ height: 10 }} />
+
+      {/* Botón Regresar al inicio */}
+      <Button title="Regresar al Inicio" color="#e94e77" onPress={() => router.push("/")} />
+
+      {/* Modal para ver detalles */}
       <ModalDetalle visible={modalVisible} onClose={() => setModalVisible(false)} cita={selectedCita} />
     </View>
   );

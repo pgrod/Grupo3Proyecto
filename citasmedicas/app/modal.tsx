@@ -23,3 +23,4 @@ export default function ModalDetalle({ visible, onClose, cita }: ModalProps) {
     </Modal>
   );
 }
+
